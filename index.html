@@ -49,6 +49,7 @@ input[type=range]{padding:0;accent-color:var(--amb)}
 @media print{body>*:not(#md){display:none!important}.modal{position:static!important;background:none!important}.sheet{max-width:none!important;max-height:none!important;box-shadow:none;background:#fff!important;color:#000!important}.noprint{display:none!important}.tb th,.tb td{border-color:#999!important;color:#000!important}.tb th,.tb tr.tt td{background:#eee!important}}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:14px}.brand img{width:38px;height:38px;border-radius:10px}.brand b{font-size:19px;font-weight:800;letter-spacing:-.3px}
 .ck{display:flex;align-items:center;gap:8px;text-transform:none;font-size:14px;color:var(--tx);letter-spacing:0;margin:0;padding:7px 0;font-weight:500}.ck input{width:18px;height:18px;margin:0;accent-color:var(--lime)}.chips{flex-wrap:wrap}
+.cal button.sel{outline:2px solid var(--tx)}.cal button.sy::after{content:'';display:block;width:5px;height:5px;border-radius:50%;background:var(--amb);margin:2px auto 0}
 </style></head><body>
 <div class="w"><div class="brand"><img src="icon-192.png" alt=""><b>Synergética</b></div><header><div class="date"><button class="ib" id="pv">◀</button><b id="dt"></b><button class="ib" id="nx">▶</button></div><div class="chips" id="pf"></div></header><main id="m"></main></div>
 <div class="nav"><div id="nv"></div></div><div id="md"></div>
@@ -117,14 +118,29 @@ function cuerpo(){const d=D(),g=S.g[S.p];return`<div class="card"><h3>Calorías 
 ${S.fo&&S.fo.length?`<div class="card"><h3>Mis alimentos (por 100 g)</h3>${S.fo.map((f,i)=>`<div class="it"><div>${esc(f.n)}<small>${r0(f.k)} kcal · P ${f.p} G ${f.g} C ${f.c}</small></div><button onclick="delFo(${i})">✕</button></div>`).join('')}</div>`:''}
 <div class="card"><h3>Copia de seguridad</h3><div class="row"><button class="btn g" onclick="bk()">⬇ Descargar</button><label class="btn g" style="margin:0;text-align:center;text-transform:none;font-size:14px;letter-spacing:0;color:var(--tx)">Restaurar<input type="file" accept=".json" hidden onchange="rs(this)"></label></div><p class="empty">Los datos se guardan en este móvil. Haz una copia de vez en cuando.</p></div>`}
 function starts(){const ds=Object.keys(S.d).filter(k=>k.startsWith(S.p+'|')&&S.d[k].r).map(k=>k.split('|')[1]).sort();return ds.filter(x=>{const p=pd(x);p.setDate(p.getDate()-1);return!S.d[S.p+'|'+ymd(p)]?.r})}
-function ciclo(){const y=cal.getFullYear(),mo=cal.getMonth(),n=new Date(y,mo+1,0).getDate();let off=(new Date(y,mo,1).getDay()+6)%7,h='';
+function ciclo(){const c=C(),y=cal.getFullYear(),mo=cal.getMonth(),n=new Date(y,mo+1,0).getDate();let off=(new Date(y,mo,1).getDay()+6)%7,h='';
 ['L','M','X','J','V','S','D'].forEach(x=>h+=`<div class="h">${x}</div>`);for(let i=0;i<off;i++)h+='<div></div>';
-for(let i=1;i<=n;i++){const s=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');h+=`<button class="${S.d[S.p+'|'+s]?.r?'p':''} ${s===ymd(new Date())?'t':''}" onclick="tg('${s}')">${i}</button>`}
+for(let i=1;i<=n;i++){const s=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');h+=`<button class="${S.d[S.p+'|'+s]?.r?'p':''} ${s===ymd(new Date())?'t':''} ${s===date?'sel':''} ${((S.d[S.p+'|'+s]?.cy?.s||[]).length||S.d[S.p+'|'+s]?.cy?.f||S.d[S.p+'|'+s]?.cy?.m)?'sy':''}" onclick="date='${s}';render()">${i}</button>`}
 const st=starts(),last=st[st.length-1];let nx='—';if(last){const x=pd(last);x.setDate(x.getDate()+28);nx=ymd(x)}
-return`<div class="card"><div class="mh"><button class="ib" onclick="cal=new Date(y0(-1));render()">◀</button><b>${cal.toLocaleString('es-ES',{month:'long',year:'numeric'})}</b><button class="ib" onclick="cal=new Date(y0(1));render()">▶</button></div><div class="cal">${h}</div><p class="empty">Toca un día para marcar o quitar el período.</p></div>
-<div class="card"><h3>Hoy · ${date}</h3><button class="btn ${D().r?'r':''}" style="width:100%" onclick="tg(date)">${D().r?'✓ Período registrado':'🩸 Marcar regla hoy'}</button></div>
-<div class="card"><h3>Predicción (${S.p})</h3><div class="pre"><span>Último inicio</span><b>${last||'Sin registros'}</b></div><div class="pre"><span>Próxima prevista (+28 d)</span><b style="color:var(--rose)">${nx}</b></div></div>`}
+return`<div class="card"><div class="mh"><button class="ib" onclick="cal=new Date(y0(-1));render()">◀</button><b>${cal.toLocaleString('es-ES',{month:'long',year:'numeric'})}</b><button class="ib" onclick="cal=new Date(y0(1));render()">▶</button></div><div class="cal">${h}</div><p class="empty">Toca un día para registrar su regla y sus síntomas. El punto naranja marca días con registro.</p></div>
+<div class="card"><h3>Registro del día · ${fmt(date)}</h3><button class="btn ${D().r?'r':''}" style="width:100%" onclick="tg(date)">${D().r?'✓ Regla registrada':'🩸 Marcar regla'}</button>
+<label>Sangrado</label><div class="chips">${FL.map((n,i)=>`<button class="chip ${c.f===i?'on':''}" onclick="setF(${i})">${n}</button>`).join('')}</div>
+<label>Flujo vaginal</label><div class="chips">${MU.map((n,i)=>`<button class="chip ${c.m===i?'on':''}" onclick="setM(${i})">${n}</button>`).join('')}</div>
+<label>Síntomas</label><div class="chips">${SY.map((n,i)=>`<button class="chip ${c.s.includes(n)?'on':''}" onclick="tgS(${i})">${n}</button>`).join('')}</div>
+<label>Dolor (${c.d}/10)</label><input type="range" min="0" max="10" value="${c.d}" style="accent-color:var(--rose)" onchange="setD(this.value)">
+<label>Notas</label><input value="${esc(c.n)}" placeholder="Opcional" onchange="setN(this.value)"></div>
+<div class="card"><h3>Predicción (${S.p})</h3><div class="pre"><span>Último inicio</span><b>${last||'Sin registros'}</b></div><div class="pre"><span>Próxima prevista (+28 d)</span><b style="color:var(--rose)">${nx}</b></div></div>${resMes(y,mo,n)}`}
 function y0(n){return new Date(cal.getFullYear(),cal.getMonth()+n,1)}
+const FL=['Sin sangrado','Manchado','Ligero','Medio','Abundante'],MU=['Ninguno','Seco','Cremoso','Acuoso','Clara de huevo'],SY=['Cefalea','Migraña','Diarrea','Estreñimiento','Hinchazón','Gases','Náuseas','Calambres','Dolor lumbar','Sensibilidad mamaria','Acné','Cansancio','Mareos','Antojos','Insomnio','Irritabilidad','Ansiedad','Tristeza','Retención de líquidos'];
+function C(dt=date){const d=D(dt);return d.cy||(d.cy={f:0,m:0,s:[],d:0,n:''})}
+function setF(v){const c=C();c.f=c.f===v?0:v;if(c.f>=2)D().r=true;save();render()}
+function setM(v){const c=C();c.m=c.m===v?0:v;save();render()}
+function tgS(i){const c=C(),n=SY[i],x=c.s.indexOf(n);x<0?c.s.push(n):c.s.splice(x,1);save();render()}
+function setD(v){C().d=+v;save();render()}
+function setN(v){C().n=v;save()}
+function resMes(y,mo,n){let sg=0,bl=0,pn2=[],cnt={};for(let i=1;i<=n;i++){const c=S.d[S.p+'|'+y+'-'+String(mo+1).padStart(2,'0')+'-'+String(i).padStart(2,'0')]?.cy;if(!c)continue;if(c.f>=1)bl++;if(c.s.length)sg++;if(c.d>0)pn2.push(c.d);c.s.forEach(x=>cnt[x]=(cnt[x]||0)+1)}
+const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,6);if(!bl&&!sg&&!pn2.length)return'';
+return`<div class="card"><h3>Resumen de ${cal.toLocaleString('es-ES',{month:'long'})}</h3><div class="pre"><span>Días con sangrado</span><b>${bl}</b></div><div class="pre"><span>Días con síntomas</span><b>${sg}</b></div>${pn2.length?`<div class="pre"><span>Dolor medio (días con dolor)</span><b>${(pn2.reduce((a,b)=>a+b,0)/pn2.length).toFixed(1)}/10</b></div>`:''}${top.length?'<h3 style="margin:14px 0 4px">Síntomas más frecuentes</h3>'+top.map(t=>`<div class="pre"><span>${t[0]}</span><b>${t[1]} ${t[1]===1?'día':'días'}</b></div>`).join(''):''}</div>`}
 function tg(s){const d=D(s);d.r=!d.r;save();render()}
 function water(n){const d=D();d.w=Math.max(0,d.w+n);save();render()}
 function del(m,i){D().m[m].splice(i,1);save();render()}
