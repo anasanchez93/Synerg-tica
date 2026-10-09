@@ -153,7 +153,7 @@ function comidas(){const d=D();return MEALS.map(m=>{const l=d.m[m]||[],k=l.reduc
 return`<div class="card"><div class="mh"><b>${m}</b><span>${r0(k)} kcal</span></div>${l.length?l.map((i,x)=>`<div class="it"><div>${i.n}<small>${i.q?i.q+' g · ':''}${r0(i.k)} kcal · P ${r0(i.p)} G ${r0(i.g)} C ${r0(i.c)}</small>${i.rid?'<small>'+parts(i).join(' + ')+'</small>':''}</div><button onclick="del('${m}',${x})">✕</button></div>`).join(''):'<div class="empty">Nada registrado</div>'}<div class="row"><button class="add" onclick="openMenu('${m}')">📋 Elegir menú</button><button class="add" onclick="openAdd('${m}')">+ Alimento</button></div></div>`}).join('')}
 function cuerpo(){const d=D(),g=S.g[S.p];return`${edCard()}${pesoCard()}${bmCard()}<div class="card"><h3>Calorías quemadas</h3><label>🔥 Reloj / actividad (kcal)</label><input type="number" inputmode="numeric" value="${d.b}" onchange="D().b=+this.value||0;save();render()"></div>
 <div class="card"><h3>Calidad del sueño</h3><div style="text-align:center">${ring(d.s,'var(--amb)',110,10,d.s+'%','recuperación')}</div><label>Ajusta el porcentaje</label><input type="range" min="0" max="100" value="${d.s}" onchange="D().s=+this.value;save();render()">${d.sl?`<div class="pre"><span>Dormido</span><b>${Math.floor(d.sl/60)} h ${d.sl%60} min</b></div>`:''}</div>
-${d.aw&&d.aw.length?`<div class="card"><h3>Actividad del Watch</h3>${d.aw.map(a=>`<div class="it"><div>${a[0]}<small>${a[1]} min · ${a[2]} kcal</small></div></div>`).join('')}</div>`:''}
+${d.st&&Object.keys(d.st).length?`<div class="card"><h3>Resumen del día</h3><div class="big" style="margin-top:0;flex-wrap:wrap;row-gap:14px">${[['pasos','👣','pasos',0],['dist','🗺️','km',1],['ejer','🏃','min de ejercicio',0],['pie','🧍','h de pie',0],['pisos','🪜','pisos',0],['fcmed','💓','lpm medios',0]].filter(x=>d.st[x[0]]!=null).map(x=>`<div style="min-width:30%"><b>${String(x[3]?d.st[x[0]]:Math.round(d.st[x[0]])).replace('.',',')}</b><span style="font-size:12px">${x[1]} ${x[2]}</span></div>`).join('')}</div></div>`:''}${d.aw&&d.aw.length?`<div class="card"><h3>Actividad del Watch</h3>${d.aw.map(a=>`<div class="it"><div>${a[0]}<small>${a[1]} min · ${a[2]} kcal</small></div></div>`).join('')}</div>`:''}
 
 `}
 function starts(){const ds=Object.keys(S.d).filter(k=>k.startsWith(S.p+'|')&&S.d[k].r).map(k=>k.split('|')[1]).sort();return ds.filter(x=>{const p=pd(x);p.setDate(p.getDate()-1);return!S.d[S.p+'|'+ymd(p)]?.r})}
@@ -343,10 +343,13 @@ function pn(v){v=String(v||'').replace(/\s/g,'');if(v.includes('.')&&v.includes(
 function imp(){const go=t=>{try{ap(t)}catch(e){alert('No he entendido los datos del portapapeles. Ejecuta el atajo y vuelve a intentarlo.')}},ask=()=>{const t=prompt('Pega aquí los datos del atajo');if(t)go(t)};
 if(navigator.clipboard&&navigator.clipboard.readText)navigator.clipboard.readText().then(go).catch(ask);else ask()}
 function ap(t,dt,q){const d=D(dt||date),aw=[];let n=0;t.split(/\r?\n/).forEach(l=>{const i=l.indexOf('=');if(i<0)return;const k=l.slice(0,i).trim().toLowerCase(),v=l.slice(i+1).trim();
-if(k==='kcal'){d.b=r0(pn(v));n++}
-else if(k==='sueno'){let m=dm(v);if(m>1440)m/=60;else if(m<=24)m*=60;d.sl=r0(m);d.s=Math.min(100,r0(m/480*100));n++}
-else if(k==='act'){const q=v.split('|');aw.push([q[0]||'Actividad',r0(dm(q[1])),r0(pn(q[2]))]);n++}});
-if(!n)throw 0;d.aw=aw;if(!q){save();render();alert('Importado ✓')}}
+if(k==='kcal'){const x=r0(pn(v));if(x>0){d.b=x;n++}}
+else if(k==='sueno'){let m=dm(v);if(m>1440)m/=60;else if(m<=24)m*=60;if(m>0){d.sl=r0(m);d.s=Math.min(100,r0(m/480*100));n++}}
+else if(k==='act'){const q=v.split('|');aw.push([q[0]||'Actividad',r0(dm(q[1])),r0(pn(q[2]))]);n++}
+else if(['fc','vfc','vo2','spo2','fr','temp','peso','grasa','musc','agua'].includes(k)){let x=pn(v);if((k==='spo2'||k==='grasa'||k==='musc'||k==='agua')&&x>0&&x<=1)x*=100;if(x>0){bmPut(k,dt||date,Math.round(x*10)/10);n++}}
+else if(k==='pa'){const q=v.split(/[\/|]/);const a=pn(q[0]),b=pn(q[1]);if(a>0&&b>0){bmPut('pa',dt||date,a,b);n++}}
+else if(['pasos','dist','ejer','pie','pisos','fcmed'].includes(k)){const x=pn(v);if(x>0){d.st=d.st||{};d.st[k]=Math.round(x*10)/10;n++}}});
+if(!n)throw 0;if(aw.length)d.aw=aw;if(!q){save();render();alert('Importado ✓')}}
 function openRec(){const TT={d:'Desayuno',a:'Almuerzos',s:'Meriendas',c:'Cenas'},TK={d:'desayuno',a:'almuerzo',s:'snack',c:'cena'};let h='';
 for(const t of['d','a','s','c']){const L=S.r.filter(r=>r.u===S.p&&r.t===TK[t]&&r.e);if(!L.length)continue;h+=`<h3 style="margin:16px 0 8px">${TT[t]}</h3>`+L.map((r,i)=>`<details class="it" style="display:block"><summary style="cursor:pointer"><b>${t==='a'||t==='c'?'Opción '+(i+1)+' · ':''}${r.n}</b></summary><p class="empty" style="font-style:normal;line-height:1.5;margin:8px 0">${r.e}</p><small>Tu plato: ${r.x}</small><small style="color:var(--lime)">${r.es?'≈ ':''}${r.k} kcal · P ${r.p} G ${r.g} C ${r.c}</small></details>`).join('')}
 md.innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="sheet"><h3>Recetario de ${S.p}</h3>${h}<button class="btn g" style="width:100%;margin-top:12px" onclick="closeM()">Cerrar</button></div></div>`}
