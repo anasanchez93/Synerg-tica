@@ -28,11 +28,15 @@ async function run(){go.disabled=true;log.textContent='';
   const lr=await fetch(SB+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify({email:e.value.trim(),password:s.value})});
   const lj=await lr.json();if(!lr.ok||!lj.access_token){L('❌ No se pudo entrar: '+(lj.error_description||lj.msg||lj.message||lr.status));go.disabled=false;return}
   let tok=lj.access_token;L('✓ Sesión iniciada');
+  L('Probando conexión con Open Food Facts…');
+  try{const r=await fetch('https://world.openfoodfacts.org/api/v2/search?countries_tags=en:spain&stores_tags=mercadona&page_size=1&fields=code');const jj=await r.json();L('✓ Open Food Facts accesible (HTTP '+r.status+', '+jj.count+' productos de Mercadona)')}
+  catch(x){let alc=false;try{await fetch('https://world.openfoodfacts.org/api/v2/search?countries_tags=en:spain&stores_tags=mercadona&page_size=1&fields=code',{mode:'no-cors'});alc=true}catch(_){}
+   L(alc?'⛔ DIAGNÓSTICO: Open Food Facts responde pero NO permite leerlo desde esta página (CORS). Dímelo así y uso otra vía.':'⛔ DIAGNÓSTICO: no hay respuesta de Open Food Facts desde este navegador/red ('+x.message+'). Prueba con wifi en vez de datos, o más tarde.');go.disabled=false;return}
   const T=t.value==='todos'?STORES:[t.value];let tot=0;
   for(const tienda of T){L('▶ '+tienda);let page=1,fails=0;
    while(true){
     L('… '+tienda+' página '+page);
-    let j;try{const r=await fetch('https://world.openfoodfacts.org/api/v2/search?countries_tags=en:spain&stores_tags='+tienda+'&page_size=100&page='+page+'&fields=code,product_name,product_name_es,brands,stores_tags,nutriments');
+    let j;try{const r=await fetch('https://world.openfoodfacts.org/api/v2/search?countries_tags=en:spain&stores_tags='+tienda+'&page_size=40&page='+page+'&fields=code,product_name,product_name_es,brands,stores_tags,nutriments');
       if(!r.ok){throw new Error('Open Food Facts '+r.status)}j=await r.json()}
     catch(x){L('⚠ '+x.message);if(++fails>4){L('Paso al siguiente');break}await sleep(15000);continue}
     fails=0;const list=j.products||[];if(!list.length){L('  fin de '+tienda);break}
@@ -41,7 +45,7 @@ async function run(){go.disabled=true;log.textContent='';
      const tx=await r.text();if(!r.ok){L('⛔ Error al guardar: '+tx.slice(0,250)+(/importar_alimentos/.test(tx)?'\n   (¿ejecutaste supabase_alimentos_importar.sql?)':''));go.disabled=false;return}
      tot+=+tx||0}
     L(`  revisados ${list.length}, guardados ${items.length} (total ${tot})`);
-    if(list.length<100){L('  fin de '+tienda);break}
+    if(list.length<40){L('  fin de '+tienda);break}
     page++;await sleep(6500)}}
   L('✅ Terminado. Guardados: '+tot)
  }catch(x){L('⛔ '+x.message)}
