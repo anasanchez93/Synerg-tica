@@ -1,26 +1,49 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Importar alimentos</title>
 <style>:root{color-scheme:dark light}body{font:16px/1.5 system-ui,sans-serif;max-width:560px;margin:0 auto;padding:20px 16px 40px;background:#0f1115;color:#eee}
 @media(prefers-color-scheme:light){body{background:#fff;color:#111}}
-input,button{font:inherit;padding:12px;border-radius:10px;border:1px solid #888;width:100%;box-sizing:border-box;margin:6px 0 12px;background:transparent;color:inherit}
+input,select,button{font:inherit;padding:12px;border-radius:10px;border:1px solid #888;width:100%;box-sizing:border-box;margin:6px 0 12px;background:transparent;color:inherit}
 button{background:#a3e635;color:#111;border:0;font-weight:700}button:disabled{opacity:.5}
 pre{background:#0004;padding:12px;border-radius:10px;white-space:pre-wrap;min-height:120px;font-size:13px}label{font-size:13px;opacity:.8}</style></head><body>
 <h1>Importar alimentos</h1>
-<p>Trae productos de Open Food Facts a tu base de datos. Deja la pantalla encendida y esta página abierta mientras trabaja (puede tardar bastante la primera vez). Se puede repetir cuando quieras: no duplica.</p>
-<label>Dirección de la función</label><input id="u" value="https://xdrjltzsglascuhptpyl.supabase.co/functions/v1/importar-alimentos">
-<label>Clave pública del proyecto (apikey)</label><input id="k" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkcmpsdHpzZ2xhc2N1aHB0cHlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjI3MjQsImV4cCI6MjEwNjU5ODcyNH0.8433MkN-CepLpwtbWyVx-BN6Wj7unqOmSw20A0NB6hY">
-<label>Clave de importación (IMPORT_SECRET)</label><input id="s" type="password" autocomplete="off">
-<label>Supermercado</label><select id="t" style="width:100%;padding:12px;margin:6px 0 12px;border-radius:10px"><option value="todos">Todos</option><option>mercadona</option><option>dia</option><option>aldi</option><option>consum</option><option>carrefour</option></select>
+<p>Trae productos de Open Food Facts a tu base de datos de alimentos. Entra con tu cuenta de Synergética (la administradora). Deja la pantalla encendida y esta página abierta; tarda un rato (Open Food Facts permite unas 10 consultas por minuto). Se puede repetir cuando quieras: no duplica.</p>
+<label>Email de tu cuenta</label><input id="e" type="email" autocomplete="username" value="anasanchez12000@gmail.com">
+<label>Contraseña de tu cuenta</label><input id="s" type="password" autocomplete="current-password">
+<label>Clave pública del proyecto (Publishable key)</label><input id="k" placeholder="sb_publishable_…">
+<label>Supermercado</label><select id="t"><option value="todos">Todos</option><option>mercadona</option><option>dia</option><option>aldi</option><option>consum</option><option>carrefour</option></select>
 <button id="go" onclick="run()">Empezar importación</button><pre id="log">Listo.</pre>
 <script>
-const L=m=>{log.textContent+='\n'+m;log.scrollTop=1e9};let stop=false;
-async function run(){go.disabled=true;log.textContent='';const T=t.value==='todos'?['mercadona','dia','aldi','consum','carrefour']:[t.value];let tot=0;
- for(const tienda of T){let page=1,tries=0;L('▶ '+tienda);
-  while(true){try{L('… pidiendo '+tienda+' página '+page);const r=await fetch(u.value,{method:'POST',headers:{'Content-Type':'application/json','x-import-secret':s.value,'apikey':k.value.trim(),...(k.value.trim().startsWith('eyJ')?{'Authorization':'Bearer '+k.value.trim()}:{})},body:JSON.stringify({tienda,page,pages:3})});const j=await r.json();
-   if(r.status===401){L(j.error==='No autorizado'?'❌ El IMPORT_SECRET no coincide con el de Supabase':'❌ Supabase rechaza la clave pública (apikey): usa la «Publishable key» (sb_publishable_…). Detalle: '+JSON.stringify(j).slice(0,200));go.disabled=false;return}
-   if(j.error){L('⚠ '+j.error);if(++tries>3){L('Paso al siguiente');break}await new Promise(x=>setTimeout(x,10000));if(j.nextPage)page=j.nextPage;continue}
-   if(typeof j.scanned!=='number'||typeof j.nextPage!=='number'){L('⛔ Respuesta inesperada (HTTP '+r.status+'). Paro. Detalle: '+JSON.stringify(j).slice(0,300));go.disabled=false;return}
-   tries=0;tot+=j.imported;L(`  ${tienda}: revisados ${j.scanned}, guardados ${j.imported} (total ${tot})`);if(j.done)break;page=j.nextPage}
-   catch(e){L('⚠ '+e.message+' (no llega a la función o se cortó la conexión)');if(++tries>3)break;await new Promise(x=>setTimeout(x,10000))}}
- }
- L('✅ Terminado. Guardados: '+tot);go.disabled=false}
+const SB='https://xdrjltzsglascuhptpyl.supabase.co',STORES=['mercadona','dia','aldi','consum','carrefour'];
+const L=m=>{log.textContent+='\n'+m;log.scrollTop=1e9},sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function tf(p){const n=p.nutriments||{};let kcal=n['energy-kcal_100g'];if(kcal==null&&n['energy_100g']!=null)kcal=n['energy_100g']/4.184;
+ const nombre=String(p.product_name_es||p.product_name||'').trim().replace(/\s+/g,' ').slice(0,120);const num=x=>x==null||isNaN(+x)?0:+x;
+ const P=num(n.proteins_100g),G=num(n.fat_100g),C=num(n.carbohydrates_100g);
+ if(nombre.length<2||kcal==null||isNaN(+kcal))return null;kcal=+kcal;
+ if(kcal<0||kcal>900||P>100||G>100||C>100||P+G+C>105)return null;if(kcal>20&&P+G+C===0)return null;
+ const tiendas=[...new Set((p.stores_tags||[]).map(t=>String(t).toLowerCase()).map(t=>STORES.find(s=>t===s||t.startsWith(s+'-'))).filter(Boolean))];
+ return{nombre,marca:String(p.brands||'').split(',')[0].trim().slice(0,60)||null,tiendas,barcode:String(p.code||'')||null,kcal:Math.round(kcal),p:Math.round(P*10)/10,g:Math.round(G*10)/10,c:Math.round(C*10)/10}}
+async function run(){go.disabled=true;log.textContent='';
+ try{
+  const key=k.value.trim();if(!key){L('❌ Pega la Publishable key del proyecto');go.disabled=false;return}
+  L('Iniciando sesión…');
+  const lr=await fetch(SB+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify({email:e.value.trim(),password:s.value})});
+  const lj=await lr.json();if(!lr.ok||!lj.access_token){L('❌ No se pudo entrar: '+(lj.error_description||lj.msg||lj.message||lr.status));go.disabled=false;return}
+  let tok=lj.access_token;L('✓ Sesión iniciada');
+  const T=t.value==='todos'?STORES:[t.value];let tot=0;
+  for(const tienda of T){L('▶ '+tienda);let page=1,fails=0;
+   while(true){
+    L('… '+tienda+' página '+page);
+    let j;try{const r=await fetch('https://world.openfoodfacts.org/api/v2/search?countries_tags=en:spain&stores_tags='+tienda+'&page_size=100&page='+page+'&fields=code,product_name,product_name_es,brands,stores_tags,nutriments');
+      if(!r.ok){throw new Error('Open Food Facts '+r.status)}j=await r.json()}
+    catch(x){L('⚠ '+x.message);if(++fails>4){L('Paso al siguiente');break}await sleep(15000);continue}
+    fails=0;const list=j.products||[];if(!list.length){L('  fin de '+tienda);break}
+    const items=list.map(tf).filter(Boolean).map(x=>({...x,tiendas:x.tiendas.includes(tienda)?x.tiendas:[...x.tiendas,tienda]}));
+    if(items.length){const r=await fetch(SB+'/rest/v1/rpc/importar_alimentos',{method:'POST',headers:{'Content-Type':'application/json',apikey:key,Authorization:'Bearer '+tok},body:JSON.stringify({items})});
+     const tx=await r.text();if(!r.ok){L('⛔ Error al guardar: '+tx.slice(0,250)+(/importar_alimentos/.test(tx)?'\n   (¿ejecutaste supabase_alimentos_importar.sql?)':''));go.disabled=false;return}
+     tot+=+tx||0}
+    L(`  revisados ${list.length}, guardados ${items.length} (total ${tot})`);
+    if(list.length<100){L('  fin de '+tienda);break}
+    page++;await sleep(6500)}}
+  L('✅ Terminado. Guardados: '+tot)
+ }catch(x){L('⛔ '+x.message)}
+ go.disabled=false}
 </script></body></html>
