@@ -7,6 +7,7 @@ pre{background:#0004;padding:12px;border-radius:10px;white-space:pre-wrap;min-he
 <h1>Importar alimentos</h1>
 <p>Trae productos de Open Food Facts a tu base de datos. Deja la pantalla encendida y esta página abierta mientras trabaja (puede tardar bastante la primera vez). Se puede repetir cuando quieras: no duplica.</p>
 <label>Dirección de la función</label><input id="u" value="https://xdrjltzsglascuhptpyl.supabase.co/functions/v1/importar-alimentos">
+<label>Clave pública del proyecto (apikey)</label><input id="k" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkcmpsdHpzZ2xhc2N1aHB0cHlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjI3MjQsImV4cCI6MjEwNjU5ODcyNH0.8433MkN-CepLpwtbWyVx-BN6Wj7unqOmSw20A0NB6hY">
 <label>Clave de importación (IMPORT_SECRET)</label><input id="s" type="password" autocomplete="off">
 <label>Supermercado</label><select id="t" style="width:100%;padding:12px;margin:6px 0 12px;border-radius:10px"><option value="todos">Todos</option><option>mercadona</option><option>dia</option><option>aldi</option><option>consum</option><option>carrefour</option></select>
 <button id="go" onclick="run()">Empezar importación</button><pre id="log">Listo.</pre>
@@ -14,7 +15,7 @@ pre{background:#0004;padding:12px;border-radius:10px;white-space:pre-wrap;min-he
 const L=m=>{log.textContent+='\n'+m;log.scrollTop=1e9};let stop=false;
 async function run(){go.disabled=true;log.textContent='';const T=t.value==='todos'?['mercadona','dia','aldi','consum','carrefour']:[t.value];let tot=0;
  for(const tienda of T){let page=1,tries=0;L('▶ '+tienda);
-  while(true){try{const r=await fetch(u.value,{method:'POST',headers:{'Content-Type':'application/json','x-import-secret':s.value},body:JSON.stringify({tienda,page,pages:12})});const j=await r.json();
+  while(true){try{const r=await fetch(u.value,{method:'POST',headers:{'Content-Type':'application/json','x-import-secret':s.value,'apikey':k.value.trim(),...(k.value.trim().startsWith('eyJ')?{'Authorization':'Bearer '+k.value.trim()}:{})},body:JSON.stringify({tienda,page,pages:12})});const j=await r.json();
    if(r.status===401){L('❌ Clave incorrecta');go.disabled=false;return}
    if(j.error){L('⚠ '+j.error);if(++tries>3){L('Paso al siguiente');break}await new Promise(x=>setTimeout(x,10000));if(j.nextPage)page=j.nextPage;continue}
    tries=0;tot+=j.imported;L(`  ${tienda}: revisados ${j.scanned}, guardados ${j.imported} (total ${tot})`);if(j.done)break;page=j.nextPage}
