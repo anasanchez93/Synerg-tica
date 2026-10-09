@@ -16,8 +16,9 @@ const L=m=>{log.textContent+='\n'+m;log.scrollTop=1e9};let stop=false;
 async function run(){go.disabled=true;log.textContent='';const T=t.value==='todos'?['mercadona','dia','aldi','consum','carrefour']:[t.value];let tot=0;
  for(const tienda of T){let page=1,tries=0;L('▶ '+tienda);
   while(true){try{const r=await fetch(u.value,{method:'POST',headers:{'Content-Type':'application/json','x-import-secret':s.value,'apikey':k.value.trim(),...(k.value.trim().startsWith('eyJ')?{'Authorization':'Bearer '+k.value.trim()}:{})},body:JSON.stringify({tienda,page,pages:12})});const j=await r.json();
-   if(r.status===401){L('❌ Clave incorrecta');go.disabled=false;return}
+   if(r.status===401){L(j.error==='No autorizado'?'❌ El IMPORT_SECRET no coincide con el de Supabase':'❌ Supabase rechaza la clave pública (apikey): usa la «Publishable key» (sb_publishable_…). Detalle: '+JSON.stringify(j).slice(0,200));go.disabled=false;return}
    if(j.error){L('⚠ '+j.error);if(++tries>3){L('Paso al siguiente');break}await new Promise(x=>setTimeout(x,10000));if(j.nextPage)page=j.nextPage;continue}
+   if(typeof j.scanned!=='number'||typeof j.nextPage!=='number'){L('⛔ Respuesta inesperada (HTTP '+r.status+'). Paro. Detalle: '+JSON.stringify(j).slice(0,300));go.disabled=false;return}
    tries=0;tot+=j.imported;L(`  ${tienda}: revisados ${j.scanned}, guardados ${j.imported} (total ${tot})`);if(j.done)break;page=j.nextPage}
    catch(e){L('⚠ '+e.message);if(++tries>3)break;await new Promise(x=>setTimeout(x,10000))}}
  }
